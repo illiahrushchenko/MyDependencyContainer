@@ -6,29 +6,69 @@ namespace MyDependecyContainer
 {
     public class MyIoc
     {
-        private readonly List<Type> _registeredTypes = new List<Type>();
-
+        private readonly List<EnteredObject> _registeredObjects = new List<EnteredObject>();
 
         public void Register<T>()
         {
-            if (IsRegistered(typeof(T))){
-                throw new Exception($"Type {typeof(T)} is already registered.");
+            var type = typeof(T);
+
+            if (IsRegistered(type))
+            {
+                throw new Exception($"Type {type} is already registered.");
             }
-            _registeredTypes.Add(typeof(T));
+
+            _registeredObjects.Add(new EnteredObject(type));
+        }
+
+        public void RegisterSingleton<T>()
+        {
+            var type = typeof(T);
+
+            if (IsRegistered(type))
+            {
+                throw new Exception($"Type {type} is already registered.");
+            }
+
+            _registeredObjects.Add(new EnteredObject(type, true));
         }
 
         public T Resolve<T>()
         {
-            if (!IsRegistered(typeof(T)))
-            {
-                throw new Exception($"Type {typeof(T)} is not registered.");
-            }
-            var parameters = GetParameters(typeof(T));
+            var type = typeof(T);
 
-            return (T)Activator.CreateInstance(typeof(T), parameters);
+            if (!IsRegistered(type))
+            {
+                throw new Exception($"Type {type} is not registered.");
+            }
+
+            return (T)GetInstance(type);
         }
 
-        private object[] GetParameters(Type type)
+        private EnteredObject GetEnteredObject(Type type)
+        {
+            var result = _registeredObjects.FirstOrDefault(x => x.Type == type);
+
+            if (result == null)
+            {
+                throw new Exception($"Type {type} is not registered.");
+            }
+
+            return result;
+        }
+
+        private object GetInstance(Type type)
+        {
+            var enteredObject = GetEnteredObject(type);
+
+            var instance = enteredObject.SingletonInstance;
+            if (instance != null) return instance;
+
+            var parameters = GetParametersFromConstructor(type);
+
+            return enteredObject.CreateInstance(parameters);
+        }
+
+        private object[] GetParametersFromConstructor(Type type)
         {
             var constructorInfo = type.GetConstructors().Single();
             var parameters = constructorInfo.GetParameters();
@@ -37,8 +77,7 @@ namespace MyDependecyContainer
 
             for (int i = 0; i < parameters.Length; i++)
             {
-                result[i] = Activator.CreateInstance(parameters[i].ParameterType,
-                    GetParameters(parameters[i].ParameterType));
+                result[i] = GetInstance(parameters[i].ParameterType);
             }
 
             return result;
@@ -46,7 +85,7 @@ namespace MyDependecyContainer
 
         private bool IsRegistered(Type type)
         {
-            return _registeredTypes.Contains(type);
+            return _registeredObjects.Any(x => x.Type == type);
         }
     }
 }

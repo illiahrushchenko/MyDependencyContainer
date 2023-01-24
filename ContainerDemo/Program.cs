@@ -9,35 +9,50 @@ namespace ContainerDemo
         {
             var ioc = new MyIoc();
 
-            ioc.Register<ProfileService>();
-            ioc.Register<EmailService>();
+            ioc.Register<ByeWriterService>();
+            ioc.Register<HelloWriterService>();
+            ioc.RegisterSingleton<SingletonNoteService>();
 
 
-            var emailService = ioc.Resolve<EmailService>();
-            emailService.Send();
+            ioc.Resolve<HelloWriterService>().Write();
+            ioc.Resolve<ByeWriterService>().Write();
+
+            Console.WriteLine(ioc.Resolve<SingletonNoteService>().Note); 
         }
     }
 
-    class ProfileService
+    class SingletonNoteService
     {
-        public string GetDefaultUser()
+        public string Note { get; set; }
+    }
+
+    class HelloWriterService
+    {
+        private readonly SingletonNoteService _noteService;
+
+        public HelloWriterService(SingletonNoteService noteService)
         {
-            return "William Shakespear";
+            _noteService = noteService;
+        }
+
+        public void Write()
+        {
+            _noteService.Note = "Hello";
         }
     }
 
-    class EmailService
+    class ByeWriterService
     {
-        private readonly ProfileService _profileService;
+        private readonly SingletonNoteService _noteService;
 
-        public EmailService(ProfileService profileService)
+        public ByeWriterService(SingletonNoteService noteService)
         {
-            _profileService = profileService;
+            _noteService = noteService;
         }
 
-        public void Send()
+        public void Write()
         {
-            Console.WriteLine($"Message sent to user {_profileService.GetDefaultUser()}");
+            _noteService.Note = "Bye";
         }
     }
 }
